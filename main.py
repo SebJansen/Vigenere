@@ -1,16 +1,10 @@
+import math
 from copy import copy
-from typing import List, Union
-
-message: str = 'deze fietsen zijn rood'
-key: str = 'abc'
-
-f = open('dutch.txt')
-wordlist = f.read()
-f.close()
+from typing import List
 
 
 # Turn a string into a list of integers denoting unicode characters
-def encode(chrs: Union[str, List[str]]) -> List[int]:
+def encode(chrs) -> List[int]:
     return [ord(c) for c in chrs]
 
 
@@ -20,13 +14,15 @@ def decode(ords: List[int]) -> str:
 
 
 # Repeat key to match length of message
-def expand_key(k: str, n: int) -> str:
-    long_k = ""
+def expand(k: List[int], n: int) -> List[int]:
+    long_k: List = []
 
     while len(long_k) < n:
-        long_k += k
+        index = len(long_k) % len(k)
+        point = k[index]
+        long_k.append(point)
 
-    return long_k[:n]
+    return long_k
 
 
 # Encrypt message with key
@@ -51,18 +47,12 @@ def decrypt(m: List[int], k: List[int]) -> List[int]:
     return result
 
 
-encoded_message: List[int] = encode(message)
-encoded_key: List[int] = encode(expand_key(key, len(message)))
-
-encrypted: List[int] = encrypt(encoded_message, encoded_key)
-decrypted: List[int] = decrypt(encrypted, encoded_key)
-
-decoded_message: str = decode(decrypted)
+f = open('dutch.txt')
+wordlist = f.read()
+f.close()
 
 
-def is_correct(s: str):
-    # print(wordlist)
-
+def has_common_word(s: str):
     for w in s.split(' '):
         if w in wordlist:
             return True
@@ -70,52 +60,62 @@ def is_correct(s: str):
     return False
 
 
-def brute_force(m: List[int]):
-    start: int = 0
-    end: int = ord('z')
-    k: List[int] = [0]
-    layers_exhausted = 0
+def brute_force(m: List[int]) -> List[int]:
+    DIGIT_MIN: int = 0
+    DIGIT_MAX: int = 122 + 1
 
-    while not is_correct(
-            decode(
-                decrypt(
-                    m,
-                        encode(expand_key(
-                            decode(k), len(m),
-                        )
-                    ),
-                )
-            )
-    ):
-        print(f'{k} is not correct')
-        latest = k[layers_exhausted]
+    amount_of_digits: int = 0
 
-        print(f'latest is {latest}')
-        print(f'end is {end}')
+    while True:
+        i = 0
 
-        if latest == end or layers_exhausted == len(k):
-            if latest == end:
-                print('level increased')
-                layers_exhausted += 1
-            if layers_exhausted == len(k):
-                # zeroing out, to start over with one extra level deeper
-                k = [0 for _ in range(0, layers_exhausted+1)]
-                print(k)
-                k[layers_exhausted] = 0
-                layers_exhausted = 0
-                print('next level')
-        k[layers_exhausted] += 1
-    if is_correct(decode(decrypt(m, k))):
-        decoded_key = decode(k)
-        print(f'key is {decoded_key}')
+        limit = DIGIT_MAX + 1
+        combinations = (limit ** amount_of_digits) - 1
 
-print(message)
-print(key)
-print(encrypted)
-print(decrypted)
-print(decoded_message)
+        while i < combinations:
+            k = [
+                math.floor(i / ((DIGIT_MAX + 1) ** n)) % (DIGIT_MAX + 1)
+                for n in range(0, amount_of_digits)
+            ]
+            k_long = expand(k, len(m))
+            dec = decrypt(m, k_long)
+            text = decode(dec)
 
-brute_force(encrypted)
+            print('--')
+            print(f'tried encoded key: {k}')
+            print(f'tried decoded key: {decode(k)}')
+            print('--')
+
+            if has_common_word(text):
+                return k
+
+            i += 1
+
+        amount_of_digits += 1
+
+
+message: str = 'deze fietsen zijn rood'
+key: List[int] = encode('a')
+
+encoded_message: List[int] = encode(message)
+encoded_key: List[int] = expand(key, len(message))
+
+encrypted: List[int] = encrypt(encoded_message, encoded_key)
+decrypted: List[int] = decrypt(encrypted, encoded_key)
+
+decoded_message: str = decode(decrypted)
+
+brute_key = brute_force(encrypted)
+
+print(f'plain message       : {message}')
+print(f'plain key           : {key}')
+print(f'encrypted message   : {encrypted}')
+print(f'decrypted message   : {decrypted}')
+print(f'decoded message     : {decoded_message}')
+print(f'encoded brute key   : {brute_key}')
+print(f'decoded brute key   : {decode(brute_key)}')
+
+
 
 # print(words)
 # for c in cipher:
